@@ -76,12 +76,10 @@ ask() {
     done
 }
 
-SID=`uname -n | awk -F. '{print $1}'|sed 's/-//g'|tr [:lower:] [:upper:]`
-
-if ask "Do you want to create a database? "; then
+inst() {
 	while :
 	do	
-	echo "Before installation please enter desired value of ORACLE_SID param [$SID]: "	
+	echo "Please enter value of ORACLE_SID variable (INSTANCE_NAME) [$SID]: "	
 	read -p "$1" sid
 	if [[ -z "$sid" ]] ; then 
 		echo "The ORACLE_SID=$SID"
@@ -99,10 +97,13 @@ if ask "Do you want to create a database? "; then
 		continue
 	fi
 	done
-else
-	echo "Try DBCA utility later"
-	exit 1
-fi
+}
+
+SID=`uname -n | awk -F. '{print $1}'|sed 's/-//g'|tr [:lower:] [:upper:]`
+
+while ask "Do you want to create an instance? "; do 
+	inst
+done
 
 echo "[GENERAL]
 RESPONSEFILE_VERSION = "11.2.0"
