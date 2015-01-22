@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #----------------------------------------------------------------------------------
-# Use this script to install Oracle DB v. 11.0.2.4 x68_64 EE
+# Use this script to install Oracle DB v. 11.2.0.4 x68_64 EE
 # Before installation please copy these files to $INSTFILES directory: 
 #
 #		p13390677_112040_Linux-x86-64_{1,2}of7.zip
