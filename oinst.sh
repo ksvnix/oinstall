@@ -1,12 +1,13 @@
 #!/bin/bash
 
 #----------------------------------------------------------------------------------
-# Use this script to install Oracle DB v. 11.2.0.4 x68_64 EE
+# Use this script to install Oracle DB v. 11.0.2.4 x68_64 EE
 # Before installation please copy these files to $INSTFILES directory: 
 #
 #		p13390677_112040_Linux-x86-64_{1,2}of7.zip
 #		db.rsp
 #		systemdbprop.sql
+#		patch_v.11204.tgz
 #-----------------------------------------------------------------------------------
 
 INSTFILES='/home/oracle'
@@ -17,6 +18,7 @@ ORACLE_HOME='/u01/app/oracle/product/11.2/db'
 ORACLE_INVENTORY='/u01/app/oraInventory'
 RESPONSEFILE='db.rsp'
 DBSETTINGS='systemdbprop.sql'
+DSTPATCHFILE='patch_v.11204.tgz'
 
 ask() {
     while true; do
@@ -146,3 +148,67 @@ for sidname in `echo ${arr[@]}`; do
 		fi
 	fi
 done
+
+echo "-------------------------------------------------------------------------------"
+
+setsid() {
+if [[ -z $SID ]]; then
+    if [[ ! -f /etc/oratab ]]; then 
+	echo "No any instance exists..." 
+	exit 1
+    fi
+SID=`egrep -v '^[[:space:]]*$|^#' /etc/oratab|head -1|awk -F: '{print $1}'`
+    if [[ -z $SID ]]; then 
+	echo "No any instance exists...".
+    exit 1
+    fi
+fi
+}
+
+orapatch() { if [[ -f $INSTFILES/$DSTPATCHFILE ]]; then
+unzip $INSTFILES/$DSTPATCHFILE
+chown -R oracle:oinstall $INSTFILES/patch
+    if [[ ! -d $INSTFILES/patch/OPatch || ! -d $INSTFILES/patch/19396455 || ! -d $INSTFILES/patch/DBMS_DST_scriptsV1.9 ]]; then
+	echo "Please check $INSTFILES/patch directory..."
+	exit 1
+    fi
+su --login oracle -c "cd $INSTFILES/patch/OPatch; export PATH=$INSTFILES/patch/OPatch/:$PATH; cd ../19396455; opatch apply; opatch lsinventory"
+su --login oracle -c "export ORACLE_SID=$SID; cd $INSTFILES/patch/DBMS_DST_scriptsV1.9; sqlplus -s / as sysdba << EOF
+whenever sqlerror exit sql.sqlcode;
+set echo off 
+set heading off
+
+@countTSTZdata.sql;
+@upg_tzv_check.sql;
+@upg_tzv_apply.sql;
+exit;
+EOF "
+else
+    echo "There are no any patch files"
+fi
+}
+
+checkdst() {
+echo "Checking DST patch version for Oracle..."
+su --login oracle -c "export ORACLE_SID=$SID;echo 'select version from v\$timezone_file;' | sqlplus -s / as sysdba > /tmp/file.$$"
+if [[ ! -f "/tmp/file.$$" ]]; then
+    echo "Something going wrong..."
+    else
+        if [[ `grep 23 /tmp/file.$$` ]]; then
+    	    echo "The Oracle DB has already been patched"
+    	    rm -f /tmp/file.$$
+    	    exit
+        else
+    	    echo "DST patch version is:$(grep "[0-9]" /tmp/file.$$)"
+            rm -f /tmp/file.$$
+            fi
+        fi
+}
+
+setsid
+checkdst
+if ask "The latest patch version is 23. Apply the latest patch?"; then
+    orapatch
+else
+    echo "Maybe play next time..."
+fi
