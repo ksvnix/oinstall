@@ -166,7 +166,7 @@ fi
 }
 
 orapatch() { if [[ -f $INSTFILES/$DSTPATCHFILE ]]; then
-unzip $INSTFILES/$DSTPATCHFILE
+tar -xzvf $INSTFILES/$DSTPATCHFILE -C $INSTFILES
 chown -R oracle:oinstall $INSTFILES/patch
     if [[ ! -d $INSTFILES/patch/OPatch || ! -d $INSTFILES/patch/19396455 || ! -d $INSTFILES/patch/DBMS_DST_scriptsV1.9 ]]; then
 	echo "Please check $INSTFILES/patch directory..."
